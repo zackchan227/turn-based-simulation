@@ -57,49 +57,70 @@ namespace Game_Turn_Based
         void Update()
         {
             if (onStop) return;
-            if (!isAttacker) return;
+            if (GameManager.Instance.DefenderCount == 0) 
+            {
+                af.PlayVictoryAnim();
+                onStop = true;
+            }
+            if(GameManager.Instance.AttackerCount == 0)
+            {
+                af.PlayVictoryAnim();
+                onStop = true;
+            }
             if (GameManager.Instance._isPlaying)
             {
                 if (Time.time >= nextTime)
                 {
-                    if (needFindNewTarget)
+                    if(!isAttacker)
                     {
-                        findNewNearestTarget();
+                        if(checkAdjacent())
+                        {
+                        
+                        }
                     }
                     else
                     {
-                        if (paths[nearestIndex] != null)
+                        if (needFindNewTarget)
                         {
-                            if (paths[nearestIndex].Count == 1)
+                            findNewNearestTarget();
+                        }
+                        else
+                        {
+                            if (paths.Count - 1 < nearestIndex) needFindNewTarget = true;
+                            if (paths[nearestIndex] != null)
                             {
-                                onBattle = true;
-                            }
-                            else
-                            {
-                                MoveToTarget();
-                                if (checkAdjacent())
+                                if (!checkTargetExist())
                                 {
-                                    onBattle = true;
-                                }
-                                
-                                if(!checkTargetExist())
-                                {
-                                    
-                                    for(int i = 0; i < paths[nearestIndex].Count; i++)
+                                    for (int i = 0; i < paths[nearestIndex].Count; i++)
                                     {
                                         ResetTileColor(paths[nearestIndex][i]);
                                     }
                                     needFindNewTarget = true;
                                 }
+                                else
+                                {
+                                    if(checkAdjacent())
+                                    {
+                                        onBattle = true;
+                                    }
+                                    else
+                                    {
+                                        //MoveToTarget();
+                                        onBattle = false;
+                                        checkThenMoveToTarget();
+                                    }
+
+                                    if (onBattle)
+                                    {
+                                        if(currentTarget.currentTarget == this) attack();
+                                    }
+                                    
+                                }
                             }
-                        }
-                        else
-                        {
-                            needFindNewTarget = true;
-                        }
-                        if (onBattle)
-                        {
-                            attack();
+                            else
+                            {
+                                needFindNewTarget = true;
+                            }
                         }
                     }
                     nextTime += 1.0f / GameManager.Instance.gameSpeed;
@@ -113,7 +134,6 @@ namespace Game_Turn_Based
             if (!isAttacker) return;
             if (GameManager.Instance._isPlaying)
             {
-
                 if (currentTarget != null)
                 {
                     if (currentTarget.healthBar.value > currentTarget.hp)
@@ -149,22 +169,22 @@ namespace Game_Turn_Based
             return false;
         }
 
-        // private void checkThenMoveToTarget()
-        // {
-        //     if (checkMoveable(paths[nearestIndex][0]))
-        //     {
-        //         GridManager.Instance.GetTileAtPosition(transform.position).RemoveUnit();
-        //         MoveTo(paths[nearestIndex][0], GameManager.Instance.gameSpeed);
-        //         ResetTileColor(paths[nearestIndex][0]);
-        //         paths[nearestIndex].RemoveAt(0);
-        //         onMove = false;
-        //         GridManager.Instance.GetTileAtPosition(transform.position).SetUnit(this.gameObject);
-        //     }
-        //     else
-        //     {
-        //         findNewNearestTarget();
-        //     }
-        // }
+        private void checkThenMoveToTarget()
+        {
+            if (checkMoveable(paths[nearestIndex][0]))
+            {
+                GridManager.Instance.GetTileAtPosition(transform.position).RemoveUnit();
+                MoveTo(paths[nearestIndex][0], GameManager.Instance.gameSpeed);
+                ResetTileColor(paths[nearestIndex][0]);
+                paths[nearestIndex].RemoveAt(0);
+                onMove = false;
+                GridManager.Instance.GetTileAtPosition(transform.position).SetUnit(this.gameObject);
+            }
+            else
+            {
+                findSecondNearestTarget();
+            }
+        }
 
         private bool checkAdjacent()
         {
@@ -230,10 +250,10 @@ namespace Game_Turn_Based
                 }
                 if (this.hp <= 0)
                 {
+                    af.PlayDieAnim();
                     GameManager.Instance.AttackerCount--;
                     GameManager.Instance.needUpdateRelativePower = true;
-                    Destroy(this.gameObject, 1.0f);
-                    af.PlayDieAnim();
+                    Destroy(this.gameObject);     
                 }
             }
             else nearestIndex = -1;
@@ -273,28 +293,44 @@ namespace Game_Turn_Based
                 else
                 {
                     Debug.Log("Nearest index = " + nearestIndex);
+                    needFindNewTarget = true;
                 }
             }
-
         }
 
-        // private void needFindNewTarget()
-        // {
-        //     Debug.Log("Finding new nearest target");
-        //     getAllDefenderPaths();
-        //     if (targets.Count == 0 || targets == null)
-        //     {
-        //         Debug.Log("No New Target!");
-        //         //StopAllCoroutines();
-        //     }
-        //     nearestIndex = checkNearestTarget();
-        //     if (nearestIndex != -1)
-        //     {
-        //         showMovingPath();
-        //         //StartCoroutine(StartAction());
-        //         //StartAction();
-        //     }
-        // }
+        private void findSecondNearestTarget()
+        {
+            Debug.Log("Finding new nearest target");
+            getAllDefenderPaths();
+            if (targets.Count == 0 || targets == null)
+            {
+                Debug.Log("No New Target!");
+                onStop = true;
+                af.PlayVictoryAnim();
+            }
+            else
+            {
+                nearestIndex = checkNearestTarget();
+                if(targets[nearestIndex] != null)
+                {
+                    targets.RemoveAt(nearestIndex);
+                    paths.RemoveAt(nearestIndex);
+                }
+               
+                nearestIndex = checkNearestTarget();
+                if (nearestIndex != -1)
+                {
+                    showMovingPath();
+                    checkFlipUnit();
+                    needFindNewTarget = false;
+                }
+                else
+                {
+                    Debug.Log("Nearest index = " + nearestIndex);
+                    needFindNewTarget = true;
+                }
+            }
+        }
 
         private void getAllDefenderPaths()
         {
@@ -306,7 +342,6 @@ namespace Game_Turn_Based
                 paths.Add(findPath(targets[i]));
             }
         }
-
 
         private int checkNearestTarget()
         {
@@ -473,7 +508,6 @@ namespace Game_Turn_Based
                         }
                     }
                 }
-
             }
             return result;
         }
@@ -499,18 +533,6 @@ namespace Game_Turn_Based
             {
                 //transform.position = Vector3.MoveTowards(transform.position, destination, GameManager.Instance.gameSpeed / Time.deltaTime);
                 transform.position = destination;
-            }
-            //af.StopCurrentAnim();
-        }
-
-        IEnumerator Move(Vector3 des)
-        {
-            af.PlayMoveAnim();
-            while (transform.position != des)
-            {
-                transform.position = Vector3.MoveTowards(transform.position, des, GameManager.Instance.gameSpeed / Time.deltaTime);
-                //transform.position = destination;
-                yield return null;
             }
             //af.StopCurrentAnim();
         }

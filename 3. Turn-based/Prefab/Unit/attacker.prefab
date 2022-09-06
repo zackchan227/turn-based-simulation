@@ -235,7 +235,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fc6f91e3cef62c940bb1617d8112f617, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  stringID: 2724598
+  stringID: 4191804
   _flipX: 0
   target: {fileID: 0}
   isAttacker: 0
@@ -570,8 +570,10 @@ MonoBehaviour:
   isAttackable: 0
   damage: 0
   hp: 16
+  maxHP: 0
   healthBar: {fileID: 4962922875804337057}
   outline: {fileID: 8789865555985063043}
+  unitName: 
 --- !u!1 &8554526895386174011
 GameObject:
   m_ObjectHideFlags: 0

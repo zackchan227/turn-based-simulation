@@ -45,6 +45,7 @@ namespace Game_Turn_Based
         public Text txtUnitHP;
         public Text txtUnitDamage;
         public Text txtUnitRandomNumber;
+        public Text txtRestart;
         bool _isFetchingGenes = false;
         string _currentIDAttacker = "";
         string _currentIDDefender = "";
@@ -86,7 +87,12 @@ namespace Game_Turn_Based
             string axieId = PlayerPrefs.GetString("selectingAttackerId", "4191804");
             string genes = PlayerPrefs.GetString("selectingAttackerGenes", "0x2000000000000300008100e08308000000010010088081040001000010a043020000009008004106000100100860c40200010000084081060001001410a04406");
             _idAttackerInput.text = axieId;
-            _attackerFigure.SetGenes(axieId, genes);
+
+            if(string.IsNullOrEmpty(axieId))
+            {
+                _attackerFigure.SetGenes("4191804", "0x2000000000000300008100e08308000000010010088081040001000010a043020000009008004106000100100860c40200010000084081060001001410a04406");
+            }
+            else _attackerFigure.SetGenes(axieId, genes);
 
             // defender
             axieId = PlayerPrefs.GetString("selectingDefenderId", "2724598");
@@ -165,7 +171,7 @@ namespace Game_Turn_Based
                     needUpdateRelativePower = false;
                 }
 
-                if(statsPanel.activeSelf)
+                if(statsPanel.activeSelf && !isPausing)
                 {
                     if(currentUnit.hp <= 0)
                     {
@@ -174,12 +180,17 @@ namespace Game_Turn_Based
                     txtUnitName.text = currentUnit.unitName;
                     txtUnitHP.text = "HP: " + currentUnit.hp.ToString() + "/" + currentUnit.maxHP.ToString();
                     txtUnitDamage.text = "Attack Damage: " + currentUnit.damage.ToString();
-                    txtUnitRandomNumber.text = UnityEngine.Random.Range(UInt64.MinValue,UInt64.MaxValue).ToString();
+                    txtUnitRandomNumber.text = UnityEngine.Random.Range(UInt16.MinValue,UInt16.MaxValue).ToString();
                 }
 
                 if(Input.GetMouseButtonDown(0))
                 {
                     selectedUnit();
+                }
+
+                if(AttackerCount == 0 || DefenderCount == 0)
+                {
+                    txtRestart.gameObject.SetActive(true);
                 }
             }
         }
@@ -255,18 +266,21 @@ namespace Game_Turn_Based
 
         void OnApplyButtonClicked()
         {
-            if (string.IsNullOrEmpty(_idAttackerInput.text) || _isFetchingGenes) return;
+            if (string.IsNullOrEmpty(_idAttackerInput.text) || string.IsNullOrEmpty(_idDefenderInput.text) ||_isFetchingGenes) return;
             _isFetchingGenes = true;
 
-            if (!_currentIDAttacker.Equals(_idAttackerInput.text))
-            {
-                StartCoroutine(GetAxiesGenes(true, _idAttackerInput.text));  // attacker figure needs to change image
-            }
-            if (!_currentIDDefender.Equals(_idDefenderInput.text))
-            {
-                StartCoroutine(GetAxiesGenes(false, _idDefenderInput.text)); // defender figure needs to change image
-            }
-
+            Debug.Log(_currentIDAttacker);
+            Debug.Log(_currentIDDefender);
+            StartCoroutine(GetAxiesGenes(true, _idAttackerInput.text)); 
+            StartCoroutine(GetAxiesGenes(false, _idDefenderInput.text));
+            // if (!_currentIDAttacker.Equals(_idAttackerInput.text))
+            // {
+            //     StartCoroutine(GetAxiesGenes(true, _idAttackerInput.text));  // attacker figure needs to change image
+            // }
+            // if (!_currentIDDefender.Equals(_idDefenderInput.text))
+            // {
+            //     StartCoroutine(GetAxiesGenes(false, _idDefenderInput.text)); // defender figure needs to change image
+            // }
         }
 
         public IEnumerator GetAxiesGenes(bool isAttacker, string axieId)
@@ -330,7 +344,12 @@ namespace Game_Turn_Based
                     currentUnit = hit.transform.gameObject.GetComponent<Unit>();
                     currentUnit.outline.SetActive(true);
                     statsPanel.SetActive(true);
-                }  
+                }
+                else
+                {
+                    statsPanel.SetActive(false);
+                    needUpdateStatsPanel = false;
+                }
             }
             else 
             {
